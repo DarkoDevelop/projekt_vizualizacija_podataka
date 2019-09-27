@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<link rel="stylesheet">
+</head>
+<style>
+input[type=range] {
+  height: 32px;
+  -webkit-appearance: none;
+  margin: 10px 0;
+  width: 30%;
+}
+input[type=range]:focus {
+  outline: none;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 16px;
+  cursor: pointer;
+  animate: 0.2s;
+  box-shadow: 0px 0px 0px #000000;
+  background: #B6B6B6;
+  border-radius: 25px;
+  border: 1px solid #8A8A8A;
+}
+input[type=range]::-webkit-slider-thumb {
+  box-shadow: 1px 1px 1px #828282;
+  border: 1px solid #8A8A8A;
+  height: 24px;
+  width: 35px;
+  border-radius: 6px;
+  background: #DADADA;
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -5px;
+}
+input[type=range]:focus::-webkit-slider-runnable-track {
+  background: #B6B6B6;
+}
+input[type=range]::-moz-range-track {
+  width: 100%;
+  height: 16px;
+  cursor: pointer;
+  animate: 0.2s;
+  box-shadow: 0px 0px 0px #000000;
+  background: #B6B6B6;
+  border-radius: 25px;
+  border: 1px solid #8A8A8A;
+}
+input[type=range]::-moz-range-thumb {
+  box-shadow: 1px 1px 1px #828282;
+  border: 1px solid #8A8A8A;
+  height: 24px;
+  width: 35px;
+  border-radius: 6px;
+  background: #DADADA;
+  cursor: pointer;
+}
+input[type=range]::-ms-track {
+  width: 100%;
+  height: 16px;
+  cursor: pointer;
+  animate: 0.2s;
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
+}
+input[type=range]::-ms-fill-lower {
+  background: #B6B6B6;
+  border: 1px solid #8A8A8A;
+  border-radius: 50px;
+  box-shadow: 0px 0px 0px #000000;
+}
+input[type=range]::-ms-fill-upper {
+  background: #B6B6B6;
+  border: 1px solid #8A8A8A;
+  border-radius: 50px;
+  box-shadow: 0px 0px 0px #000000;
+}
+input[type=range]::-ms-thumb {
+  margin-top: 1px;
+  box-shadow: 1px 1px 1px #828282;
+  border: 1px solid #8A8A8A;
+  height: 24px;
+  width: 35px;
+  border-radius: 6px;
+  background: #DADADA;
+  cursor: pointer;
+}
+input[type=range]:focus::-ms-fill-lower {
+  background: #B6B6B6;
+}
+input[type=range]:focus::-ms-fill-upper {
+  background: #B6B6B6;
+}
+div.tooltip {			
+    text-align: center;												
+    font: 12px sans-serif;							
+    pointer-events: none;	
+}
+
+div.tooltip {
+  color: #222; 
+  background: #fff; 
+  padding: .5em; 
+  text-shadow: #f5f5f5 0 1px 0;
+  border-radius: 2px; 
+  box-shadow: 0px 0px 2px 0px #a6a6a6; 
+  opacity: 0.9; 
+  position: absolute;
+}
+
+</style>
+<body id="body">
+<div class="header">
+<h1  align="center">Nuclear Detonation Timeline 1945 - 1998</h1>
+</div>
+<script type="text/javascript">
+var width = 1340;
+var height = 600;
+var offsetL = document.getElementById('body').offsetLeft+(width/2)-650;
+var offsetT =document.getElementById('body').offsetTop+(height/2)-204;
+
+var dataSet = {};
+
+var projection = d3.geo.mercator()
+	.center([0, 0])
+	.scale(140)
+	.translate([635, 410])
+	.rotate([-10, 0]);
+var path = d3.geo.path()
+	.projection(projection);
+
+var svg = d3.select("body").append("svg")
+	.attr("width", width)
+	.attr("height", height)
+	.attr("class", "svg")
+	.style("background", "#99CCFF");
+  	
+var div = d3.select("body").append("div")	
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+	
+var tooltip = d3.select("body").append("div").attr("class", "tooltip hidden");
+			
+d3.json("world.json", function(error, world) { 
+		var data = world;
+		var states = svg.selectAll("path.county")
+		.data(data.features)
+		.enter()
+		.append("path")
+		.attr("class", "county")
+		.attr("id", function(d) { return d.id; })
+		.attr("d", path) .style("fill", "lightyellow")
+		.style("stroke", "gray")
+		.style("stroke-width", 1)
+		.style("stroke-opacity", 1)
+		.on("mouseover", function(d) {				
+			d3.select(this)
+				.transition()
+				.style("fill", "gray");		
+		})					
+		.on("mousemove", function(d,i) {
+			var mouse = d3.mouse(svg.node()).map( function(d) { return parseInt(d); } );
+				tooltip.classed("hidden", false)
+				.attr("style", "left:"+(mouse[0]+offsetL)+"px;top:"+(mouse[1]+offsetT)+"px")
+				.html(d.properties.name)
+				.transition()		
+				.duration(200)		
+				.style("opacity", .9);
+      })
+		.on("mouseout",  function(d,i) {
+			tooltip.classed("hidden", true)
+				.transition()		
+				.duration(500)		
+				.style("opacity", 0);
+				
+			d3.select(this)
+				.transition()
+				.style("fill","lightyellow");
+      }); 
+	
+	d3.csv("bombice.csv", function(data) {
+		dataSet = data;
+		updateChart(data);
+	});
+});
+
+	function updateChart(data) {
+		var circles = svg.selectAll("circle")
+			.data(data.filter(function(d) { return d.YEAR == document.getElementById("timeslide").value ? true : false; }));
+		circles.attr("r",6)
+			.style("fill","red")
+			.style("opacity",0.70)
+			.attr( "stroke", "#999" )
+			.attr("cx",function (d){return projection([d.LONGITUDE,d.LATITUDE])[0];}) 	// x projekcija svih bombica
+			.attr("cy",function (d){return projection([d.LONGITUDE,d.LATITUDE])[1];})	// y projekcija svih bombica
+			.on("mouseover", function(d) {		
+            div.transition()		
+                .duration(200)		
+                .style("opacity", .9);	
+            div	.html('Drop Year: 19'+ d.YEAR+ "<br/>" + "Drop Month: " + d.MONTH+ "<br/>"+ "Drop Day: "  + d.DAY+ "<br/>"  + "Country dropped: " + d.COUNTRY+ "<br/>"  + "Purpose: " + d.PURPOSE+ "<br/>"+ "Name: "+ d.NAME)
+                .style("left", (d3.event.pageX) + "px")		
+                .style("top", (d3.event.pageY - 28) + "px");	
+            })
+        .on("mouseout", function(d) {		
+            div.transition()		
+                .duration(500)		
+                .style("opacity", 0);	
+        });	
+
+        circles.enter()
+		.append("circle")
+		.attr("r",6)
+		.style("fill","red")
+		.style("opacity",0.65)
+		.attr( "stroke", "#999" )
+		.attr("cx",function (d){return projection([d.LONGITUDE,d.LATITUDE])[0];}) 
+		.attr("cy",function (d){return projection([d.LONGITUDE,d.LATITUDE])[1];})	
+		.on("mouseover", function(d) {		
+            div.transition()		
+                .duration(200)		
+                .style("opacity", .9);	
+            div	.html('Drop Year: 19'+ d.YEAR+ "<br/>" + "Drop Month: " + d.MONTH+ "<br/>"+ "Drop Day: "  + d.DAY+ "<br/>"  + "Country dropped: " + d.COUNTRY+ "<br/>"  + "Purpose: " + d.PURPOSE+ "<br/>"+ "Name: "+ d.NAME)	
+                .style("left", (d3.event.pageX) + "px")		
+                .style("top", (d3.event.pageY - 28) + "px");	
+            })
+        .on("mouseout", function(d) {		
+            div.transition()		
+                .duration(500)		
+                .style("opacity", 0);	
+        });
+
+        circles.exit().remove();
+	}
+
+	function prikaziBroj(){  
+		var SliderValue = document.getElementById("timeslide").value;
+			document.getElementById('range').innerHTML="19"+SliderValue;
+			updateChart(dataSet);
+		return SliderValue;
+	}
+
+</script>
+<div id="sliderContainer" align="center">
+        <input id="timeslide" min="45" max="98" step="1" value="45" type="range" onchange="prikaziBroj(this.value);"/><output id="sliderVal"></output><br>
+        <span id="range">1945</span>
+    </div>
+</body>
+</html>
